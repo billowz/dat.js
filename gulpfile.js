@@ -79,7 +79,7 @@ gulp.task('build:module', ['build:template'], function() {
     .pipe(moduleBuilder.buildModule({
       out: libMain,
       excludes: [/^doc\.js$/, /\/doc\/.*$/, /_[^/]*\.js$/],
-      tpl: fs.readFileSync('./tool/index-tmpl.js').toString()
+      tpl: fs.readFileSync('./tmpl/index.js').toString()
     }))
     .pipe(gulp.dest(scriptSrc));
 });
@@ -90,7 +90,7 @@ gulp.task('build:module:doc', function() {
       out: docMain,
       includes: [/\/doc$/],
       excludes: [/_[^/]*\.js$/],
-      tpl: fs.readFileSync('./tool/doc-tmpl.js').toString()
+      tpl: fs.readFileSync('./tmpl/doc.js').toString()
     }))
     .pipe(gulp.dest(scriptSrc));
 });
