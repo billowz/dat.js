@@ -9,6 +9,6 @@
  */
 
 module.exports = {
-  Util: require('./util'),
-  Tmpl: require('./tmpl')
+  Tmpl: require('./tmpl'),
+  Util: require('./util')
 };

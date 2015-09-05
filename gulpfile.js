@@ -12,8 +12,8 @@ var fs = require('fs'),
   webpack = require('webpack'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
-  moduleBuilder = require('./module-builder.js'),
-  mkcfg = require('./make.webpack.js'),
+  moduleBuilder = require('./tool/module-builder.js'),
+  mkcfg = require('./tool/make.webpack.js'),
   externals = ([{
     path: 'react-router',
     root: 'ReactRouter',
@@ -79,7 +79,7 @@ gulp.task('build:module', ['build:template'], function() {
     .pipe(moduleBuilder.buildModule({
       out: libMain,
       excludes: [/^doc\.js$/, /\/doc\/.*$/, /_[^/]*\.js$/],
-      tpl: fs.readFileSync('./index-tmpl.js').toString()
+      tpl: fs.readFileSync('./tool/index-tmpl.js').toString()
     }))
     .pipe(gulp.dest(scriptSrc));
 });
@@ -90,7 +90,7 @@ gulp.task('build:module:doc', function() {
       out: docMain,
       includes: [/\/doc$/],
       excludes: [/_[^/]*\.js$/],
-      tpl: fs.readFileSync('./doc-tmpl.js').toString()
+      tpl: fs.readFileSync('./tool/doc-tmpl.js').toString()
     }))
     .pipe(gulp.dest(scriptSrc));
 });
