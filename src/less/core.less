@@ -1,0 +1,98 @@
+/* core 123*/
+
+@color-menu-border: #ccc;
+@color-menu-child-border: #eee;
+@color-menu-children-split-border: #eee;
+@color-menu-link: #777;
+@color-menu-link-selected: #000;
+body {
+    line-height: 1.6;
+}
+
+.user-select(@user-select-status: none) {
+    -moz-user-select: @user-select-status;
+    -o-user-select: @user-select-status;
+    -khtml-user-select: @user-select-status;
+    -webkit-user-select: @user-select-status;
+    -ms-user-select: @user-select-status;
+    user-select: @user-select-status;
+}
+
+.workbench {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+.pure-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    .user-select;
+    .pure-menu-item,
+    .pure-menu-heading {
+        height: auto;
+        padding: 0;
+        margin: 0;
+    }
+    .pure-menu-heading-content {
+        padding: .5em 1em;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .pure-menu-heading>.pure-menu-link:hover,
+    .pure-menu-heading>.pure-menu-link:focus {
+        background: transparent;
+    }
+    .pure-menu-link {
+        cursor: pointer;
+    }
+    .pure-menu-children.animated {
+        display: inline-block;
+    }
+    .pure-menu-selected .pure-menu-link,
+    .pure-menu-selected .pure-menu-link:visited {
+        color: @color-menu-link;
+    }
+    .pure-menu-selected>.pure-menu-link,
+    .pure-menu-selected>.pure-menu-link:visited {
+        color: @color-menu-link-selected;
+    }
+}
+
+.pure-menu-horizontal {
+    border-bottom: 1px solid @color-menu-border;
+    .pure-menu-children {
+        .pure-menu-children {
+            left: 100%;
+            top: 0;
+        }
+        .pure-menu-has-children>.pure-menu-link:after {
+            content: "\25B8";
+        }
+        border: 1px solid @color-menu-child-border;
+        .pure-menu-item {
+            border-top: 1px solid @color-menu-children-split-border;
+        }
+        :first-child {
+            border-top: none;
+        }
+    }
+}
+
+.pure-menu-vertical {
+    .pure-menu-children {
+        position: static;
+        >.pure-menu-item {
+            >.pure-menu-link {
+                padding-left: 1.5em;
+            }
+        }
+    }
+    .pure-menu-has-children > .pure-menu-link:after {
+        content: "\25BE";
+    }
+}
