@@ -9,6 +9,7 @@
  */
 
 module.exports = {
-  Tmpl: require('./tmpl'),
+  Animate: require('./animate'),
+  Event: require('./event'),
   Util: require('./util')
 };

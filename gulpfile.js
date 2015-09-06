@@ -15,52 +15,52 @@ var fs = require('fs'),
   moduleBuilder = require('./tool/module-builder.js'),
   mkcfg = require('./tool/make.webpack.js'),
   externals = ([{
-    path: 'react-router',
-    root: 'ReactRouter',
-    lib: 'react-router'
-  }, {
-    path: 'material-ui',
-    root: 'MaterialUI',
-    lib: 'material-ui'
-  }, {
-    path: 'react-bootstrap',
-    root: 'ReactBootstrap',
-    lib: 'react-bootstrap'
-  }, {
     path: 'q',
     root: 'Q',
     lib: 'q'
   }, {
-    path: 'reqwest',
-    root: 'reqwest',
-    lib: 'reqwest'
-  }, {
     path: 'org/cometd',
     root: 'org.cometd',
     lib: 'org/cometd'
+  }, {
+    path: 'jquery',
+    root: 'jQuery',
+    lib: 'jquery'
+  }, {
+    path: 'lodash',
+    root: '_',
+    lib: '_'
+  }, {
+    path: 'rivets',
+    root: 'rivets',
+    lib: 'rivets'
   }]),
   library = requireLibrary = 'dat',
   libOutput = library + '.js',
   docOutput = library + '.doc.js',
   cssOutput = library + '.css',
-  templateSrc = './src/template',
   dist = './dist/js',
   cssDist = './dist/css',
   cssThemeDist = './dist/css',
   docDist = './dist',
-  scriptSrc = './src/script',
+  templateSrc = './src/template',
+  templateDist = './src/template',
+  scriptSrc = './src/js',
   lessSrc = './src/less',
   lessThemeSrc = './src/less/theme',
   libMain = 'index.js',
   docMain = 'doc.js',
   host = 'localhost',
   port = 8089,
+  moduleIdxTmplSrc = './tmpl/index.js',
+  docIdxTmplSrc = './tmpl/doc.js',
   lib = {
     src: scriptSrc + '/' + libMain,
     library: library,
     require: requireLibrary,
     filename: libOutput,
-    externals: externals
+    externals: externals,
+    moduleDirectories: ['dependency', './src']
   },
   doc = {
     src: scriptSrc + '/' + docMain,
@@ -71,7 +71,8 @@ var fs = require('fs'),
       path: requireLibrary,
       root: library,
       lib: requireLibrary
-    })
+    }),
+    moduleDirectories: ['dependency', './src']
   };
 
 gulp.task('build:module', ['build:template'], function() {
@@ -79,7 +80,7 @@ gulp.task('build:module', ['build:template'], function() {
     .pipe(moduleBuilder.buildModule({
       out: libMain,
       excludes: [/^doc\.js$/, /\/doc\/.*$/, /_[^/]*\.js$/],
-      tpl: fs.readFileSync('./tmpl/index.js').toString()
+      tpl: fs.readFileSync(moduleIdxTmplSrc).toString()
     }))
     .pipe(gulp.dest(scriptSrc));
 });
@@ -90,7 +91,7 @@ gulp.task('build:module:doc', function() {
       out: docMain,
       includes: [/\/doc$/],
       excludes: [/_[^/]*\.js$/],
-      tpl: fs.readFileSync('./tmpl/doc.js').toString()
+      tpl: fs.readFileSync(docIdxTmplSrc).toString()
     }))
     .pipe(gulp.dest(scriptSrc));
 });
@@ -98,7 +99,7 @@ gulp.task('build:module:doc', function() {
 gulp.task('build:template', function() {
   return gulp.src(templateSrc)
     .pipe(moduleBuilder.buildTemplate())
-    .pipe(gulp.dest(scriptSrc + '/tmpl'));
+    .pipe(gulp.dest(templateDist));
 });
 
 function _buildCompontent(dir, option, checFile) {
@@ -112,7 +113,8 @@ function _buildCompontent(dir, option, checFile) {
       devtool: 'source-map',
       library: option.library,
       externals: option.externals || [],
-      plugins: option.plugins || []
+      plugins: option.plugins || [],
+      moduleDirectories: moduleDirectories
     },
     miniCfg = {
       entry: option.src,
@@ -123,7 +125,8 @@ function _buildCompontent(dir, option, checFile) {
         compress: {
           warnings: false
         }
-      }))
+      })),
+      moduleDirectories: option.moduleDirectories
     }
   return gulp.src('./')
     .pipe(gulpWebpack(mkcfg(cfg)))
@@ -188,7 +191,7 @@ gulp.task('clean:dist', function() {
 });
 
 gulp.task('clean:template', function() {
-  return gulp.src([scriptSrc + '/tmpl/**/*.html.js'])
+  return gulp.src([templateDist + '/**/*.html.js'])
     .pipe(clean());
 });
 
@@ -196,12 +199,12 @@ gulp.task('clean', ['clean:dist', 'clean:template']);
 
 gulp.task('watch:module', function(event) {
 
-  gulp.watch('index-tmp.js', ['build:module']);
-  gulp.watch('doc-tmp.js', ['build:module:doc']);
+  gulp.watch(moduleIdxTmplSrc, ['build:module']);
+  gulp.watch(docIdxTmplSrc, ['build:module:doc']);
 
   gulp.watch([templateSrc + '/**/*.html'], ['build:template'])
 
-  gulp.watch([scriptSrc + '/*.js', '!' + scriptSrc + '/' + docMain, '!' + scriptSrc + '/**/doc/**'], function(event) {
+  gulp.watch([scriptSrc + '/**/*.js', '!' + scriptSrc + '/' + docMain, '!' + scriptSrc + '/**/doc/**'], function(event) {
     if (event.type === 'added' || event.type === 'deleted') {
       gulp.start('build:module');
     }
@@ -222,30 +225,36 @@ gulp.task('watch:style', function() {
 gulp.task('watch', ['watch:module', 'watch:style']);
 
 gulp.task('server', ['build:dist'], function() {
-  var cfg = {
-    entry: {},
-    publicPath: '/dist/js/',
-    output: path.join(__dirname, '[name]'),
-    library: library,
-    externals: doc.externals,
-    hot: true,
-    devtool: 'source-map',
-    plugins: [new webpack.HotModuleReplacementPlugin(), new webpack.NoErrorsPlugin()]
-  };
+  var moduleDirectories = [].concat(lib.moduleDirectories),
+    cfg = {
+      entry: {},
+      publicPath: 'http://' + host + ':' + port + '/dist/js/',
+      output: path.join(__dirname, '[name]'),
+      library: library,
+      externals: doc.externals,
+      hot: true,
+      devtool: 'source-map',
+      plugins: [new webpack.NoErrorsPlugin()],
+      moduleDirectories: moduleDirectories
+    };
+  doc.moduleDirectories.forEach(function(dir) {
+    if (moduleDirectories.indexOf(dir) == -1) {
+      moduleDirectories.push(dir);
+    }
+  });
   cfg.entry[lib.filename] = lib.src;
   cfg.entry[doc.filename] = doc.src;
-  cfg.entry['server.js'] = ['webpack-dev-server/client?http://' + host + ':' + port, 'webpack/hot/only-dev-server'];
 
   var devServer = new WebpackDevServer(webpack(mkcfg(cfg)), {
     contentBase: path.join('./'),
     publicPath: cfg.publicPath,
     hot: true,
     noInfo: false,
-    inline: true
+    inline: true,
+    stats: {
+      colors: true
+    }
   });
-  devServer.use('/dist/', express['static'](path.resolve(process.cwd(), 'dist')));
-  devServer.use('/bower_components/', express['static'](path.resolve(process.cwd(), 'bower_components')));
-
   devServer.listen(port, host, function(err, result) {
     if (err) {
       console.log(err);

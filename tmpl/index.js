@@ -7,7 +7,7 @@
  * @license MIT
  */<%}else{%>
 /**!
- * Dat.js Module:<%=path%>
+ * Dat.js Module:.<%=path%>
  */<%}%>
 
 module.exports = {<%for(var i=0; i<modules.length; i++){%>
