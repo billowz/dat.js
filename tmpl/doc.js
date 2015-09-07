@@ -18,7 +18,6 @@ let Doc = {},
         }
     }<%= i < modules.length - 1 ? "," : "" %><% } %>
   };
-
 Doc.Compontents = Compontents;
 dat.Doc = Doc;
 $(document).ready(function(){

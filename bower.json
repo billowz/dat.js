@@ -15,7 +15,6 @@
     "library"
   ],
   "license": "MIT",
-  "private": false,
   "ignore": [
   ],
   "dependencies": {

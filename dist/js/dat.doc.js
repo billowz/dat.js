@@ -73,7 +73,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    readmes: {}
 	  }
 	};
-	
 	Doc.Compontents = Compontents;
 	dat.Doc = Doc;
 	$(document).ready(function () {

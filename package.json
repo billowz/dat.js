@@ -4,8 +4,7 @@
   "description": "Data-driven component library",
   "main": "src/scripts/index.js",
   "scripts": {
-    "test": "test",
-    "deploy": "bower register dat.js git://github.com/tao-zeng/dat.js.git"
+    "test": "test"
   },
   "repository": {
     "type": "git",
