@@ -114,7 +114,7 @@ function _buildCompontent(dir, option, checFile) {
       library: option.library,
       externals: option.externals || [],
       plugins: option.plugins || [],
-      moduleDirectories: moduleDirectories
+      moduleDirectories: option.moduleDirectories
     },
     miniCfg = {
       entry: option.src,

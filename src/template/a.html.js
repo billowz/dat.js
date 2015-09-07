@@ -1,1 +1,1 @@
-module.exports = '<section id="auction"><h3>{ auction.product.name }</h3><p>Current bid: { auction.currentBid | money }</p><aside rv-if="auction.timeLeft | lt 120">Hurry up! There is { auction.timeLeft | time } left.</aside></section>';
+module.exports = '<section id="auction"><h3>{ auction.product.name }</h3><p>Current bid: { auction.currentBid | money }</p><aside rv-if="auction.timeLeft | lt 120" attr="{auction.timeLeft}">Hurry up! There is { auction.timeLeft | time } left.</aside></section>';

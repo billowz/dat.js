@@ -5,26 +5,18 @@
   "authors": [
     "tao.zeng <tao.zeng.zt@gmail.com>"
   ],
-  "description": "Data-driven component library",
-  "main": "src/scripts/index.js",
-  "moduleType": [
-    "yui"
-  ],
+  "description": "data-driven component library",
+  "main": "dist/js/dat.js",
   "keywords": [
     "compontent",
     "data-driven",
     "databinding",
-    "javascripts",
+    "javascript",
     "library"
   ],
   "license": "MIT",
-  "private": true,
+  "private": false,
   "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "test",
-    "tests"
   ],
   "dependencies": {
     "rivets":"",
