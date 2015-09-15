@@ -41,31 +41,27 @@ var fs = require('fs'),
       path: 'rivets',
       root: 'rivets',
       lib: 'rivets'
-    }, {
-      path: 'dat',
-      root: 'dat',
-      lib: 'dat'
     }]
   },
   doc = {
     src: './src/js',
     dist: './dist/js',
     entry: 'doc.js',
-    library: 'dat',
-    output: 'dat.doc.js',
+    library: main.library,
+    output: main.output.replace(/js$/, 'doc.js'),
     moduleDirectories: ['dependency', './src'],
     externals: main.externals.concat({
-      path: 'dat',
-      root: 'dat',
-      lib: 'dat'
+      path: main.library,
+      root: main.library,
+      lib: main.library
     })
   },
   less = {
     src: './src/less',
     dist: './dist/css',
-    output: 'dat.css',
+    output: main.output.replace(/js$/, 'css'),
     theme: {
-      output: 'dat-{name}.css',
+      output: main.output.replace(/\.js$/, '-{name}.css'),
       src: './src/less/theme',
       dist: './dist/css/theme'
     }

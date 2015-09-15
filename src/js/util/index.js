@@ -4,9 +4,84 @@
  */
 
 const _ = require('lodash'),
-  Q = require('q');
+  Q = require('q'),
+  Log = require('./log'),
+  IteratorMsgTempl = _.template('Invalid Type ${obj} need ${type}.');
+
+class ArrayIterator {
+  constructor(array, point) {
+    this.array = array;
+    this.index = point || 0;
+  }
+  next(pred, invalidType, alwaysToNext, msg, type) {
+    if (this.index >= this.array.length) {
+      return undefined;
+    }
+    let currentElement = this.array[this.index];
+    if (!pred || pred(currentElement)) {
+      this.index++;
+      return currentElement;
+    } else if (pred && invalidType) {
+      if (!msg) {
+        msg = IteratorMsgTempl({
+          obj: currentElement,
+          type: type
+        });
+      }
+      switch (invalidType) {
+        case 'throw':
+          throw new TypeError(msg);
+        case 'debug':
+        case 'log':
+        case 'warn':
+        case 'error':
+          Log[invalidType](msg, ' ', currentElement, ' ', this.array, ' ', pred.name, ' ', pred);
+          break;
+      }
+      if (alwaysToNext) {
+        this.index++;
+        return currentElement;
+      }
+    }
+    return undefined;
+  }
+  nextString(invalidType, alwaysToNext, msg) {
+    return this.next(_.isString, invalidType, alwaysToNext, msg, 'String');
+  }
+  nextNumber(invalidType, alwaysToNext, msg) {
+    return this.next(_.isNumber, invalidType, alwaysToNext, msg, 'Number');
+  }
+  nextBool(invalidType, alwaysToNext, msg) {
+    return this.next(_.isBoolean, invalidType, alwaysToNext, msg, 'Boolean');
+  }
+  nextObject(invalidType, alwaysToNext, msg) {
+    return this.next(_.isObject, invalidType, alwaysToNext, msg, 'Object');
+  }
+  nextPlainObject(invalidType, alwaysToNext, msg) {
+    return this.next(_.isPlainObject, invalidType, alwaysToNext, msg, 'PlainObject');
+  }
+  nextFunction(invalidType, alwaysToNext, msg) {
+    return this.next(_.isFunction, invalidType, alwaysToNext, msg, 'Function');
+  }
+  nextRegExp(invalidType, alwaysToNext, msg) {
+    return this.next(_.isRegExp, invalidType, alwaysToNext, msg, 'RegExp');
+  }
+  nextArray(invalidType, alwaysToNext, msg) {
+    return this.next(_.isArray, invalidType, alwaysToNext, msg, 'Array');
+  }
+  nextElement(invalidType, alwaysToNext, msg) {
+    return this.next(_.isElement, invalidType, alwaysToNext, msg, 'HTMLElement');
+  }
+  nextDate(invalidType, alwaysToNext, msg) {
+    return this.next(_.isDate, invalidType, alwaysToNext, msg, 'Date');
+  }
+}
 
 const Util = {
+  ArrayIterator: ArrayIterator,
+  arrayIterator(array, point) {
+    return new ArrayIterator(array, point);
+  },
   promise(c) {
     let def = Q.defer();
     c(def);
@@ -93,8 +168,37 @@ const Util = {
       .value();
   },
 
+  transition(duration, onStep, onEnd) {
+    let start = new Date(),
+      reqid,
+      step = 0;
+    function end(state, err) {
+      reqid = null;
+      onEnd(state, err);
+    }
+    function calc() {
+      if (!reqid) return;
+      if ((step = new Date() - start) < duration) {
+        try {
+          onStep(step)
+          reqid = window.requestAnimationFrame(calc);
+        } catch (e) {
+          end('error', e.message);
+        }
+      } else {
+        end('finish');
+      }
+    }
+    reqid = window.requestAnimationFrame(calc);
+    return function() {
+      if (reqid) {
+        window.cancelAnimationFrame(reqid);
+        end('cancel');
+      }
+    };
+  },
+
   Dom: require('./dom'),
-  RequestFrame: require('./request-frame'),
-  Log: require('./log')
+  Log: Log
 };
 module.exports = Util;

@@ -5,7 +5,7 @@
 const CssEvent = require('./css-event'),
   Util = require('../util'),
   Effects = require('./effects'),
-  {Dom, RequestFrame} = Util;
+  {Dom} = Util;
 
 class AnimateProcessor {
   constructor(option) {
@@ -219,7 +219,7 @@ class TweenFrameProcessor extends AnimateProcessor {
     this.stop();
     return Util.promise((def) => {
       this._beforeTransition();
-      this._animate = RequestFrame.duration(this.duration,
+      this._animate = Util.transition(this.duration,
         this._calStyles.bind(this), (err) => {
           this._animate = null;
           this._endTransition();

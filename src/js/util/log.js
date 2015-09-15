@@ -15,7 +15,7 @@ module.exports = {
   warn() {
     callconsole('warn', ['[warn]'].concat(_.slice(arguments)));
   },
-  err() {
+  error() {
     callconsole('error', ['[error]'].concat(_.slice(arguments)));
   },
   group(callback) {

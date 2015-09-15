@@ -1,1 +1,0 @@
-module.exports = '<div>12312</div>';
