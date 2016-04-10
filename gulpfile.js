@@ -1,243 +1,186 @@
-var fs = require('fs'),
-  path = require('path'),
-  express = require('express'),
+var path = require('path'),
   gulp = require('gulp'),
-  gutil = require('gulp-util'),
-  rename = require('gulp-rename'),
-  gulpless = require('gulp-less'),
-  minifycss = require('gulp-minify-css'),
-  concat = require('gulp-concat'),
   clean = require('gulp-clean'),
-  sourcemaps = require('gulp-sourcemaps'),
+  run = require('gulp-run'),
   webpack = require('webpack'),
+  runSequence = require('run-sequence'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
-  moduleBuilder = require('./tool/module-builder.js'),
-  mkcfg = require('./tool/make.webpack.js'),
-  main = {
-    src: './src/js',
-    dist: './dist/js',
-    entry: 'index.js',
-    library: 'dat',
-    output: 'dat.js',
-    moduleDirectories: ['dependency', './src'],
-    externals: [{
-      path: 'q',
-      root: 'Q',
-      lib: 'q'
-    }, {
-      path: 'org/cometd',
-      root: 'org.cometd',
-      lib: 'org/cometd'
-    }, {
-      path: 'jquery',
-      root: 'jQuery',
-      lib: 'jquery'
-    }, {
-      path: 'lodash',
-      root: '_',
-      lib: '_'
-    }, {
-      path: 'rivets',
-      root: 'rivets',
-      lib: 'rivets'
-    }]
-  },
-  doc = {
-    src: './src/js',
-    dist: './dist/js',
-    entry: 'doc.js',
-    library: main.library,
-    output: main.output.replace(/js$/, 'doc.js'),
-    moduleDirectories: ['dependency', './src'],
-    externals: main.externals.concat({
-      path: main.library,
-      root: main.library,
-      lib: main.library
-    })
-  },
-  less = {
-    src: './src/less',
-    dist: './dist/css',
-    output: main.output.replace(/js$/, 'css'),
-    theme: {
-      output: main.output.replace(/\.js$/, '-{name}.css'),
-      src: './src/less/theme',
-      dist: './dist/css/theme'
-    }
-  },
-  template = {
-    src: './src/template',
-    dist: './src/template'
-  },
-  devserver = {
-    host: 'localhost',
-    port: 8089
-  },
-  moduleTmpl = {
-    index: './tmpl/index.js',
-    doc: './tmpl/doc.js'
-  };
+  karma = require('karma').Server,
+  webpackCfg = require('./build/webpack.dev.config.js'),
+  minimist = require('minimist'),
+  codecov = require('gulp-codecov'),
+  bump = require('gulp-bump'),
+  git = require('gulp-git'),
+  pkg = require('./package.json'),
+  dist = './dist'
 
-function _buildCompontent(config, rebuild) {
-  var output = path.join(__dirname, config.dist, config.output);
-  if (!rebuild && fs.existsSync(output)) {
-    return;
-  }
-  var cfg = Object.create(config),
-    miniCfg = Object.create(config);
-  cfg.entry = miniCfg.entry = config.src + '/' + config.entry;
-  cfg.output = miniCfg.output = output;
-  cfg.devtool = 'source-map';
-  miniCfg.output = miniCfg.output.replace(/js$/, 'min.js');
-  miniCfg.plugins = (miniCfg.plugins || []).concat(new webpack.optimize.UglifyJsPlugin({
-    compress: {
-      warnings: false
-    }
-  }));
-  return gulp.src(config.src)
-    .pipe(gulpWebpack(mkcfg(cfg)))
-    .pipe(gulp.dest(config.dist))
-    .pipe(gulpWebpack(mkcfg(miniCfg)))
-    .pipe(gulp.dest(config.dist));
+function miniConfig(webpackCfg) {
+  var miniCfg = Object.assign({}, webpackCfg);
+  miniCfg.output = Object.assign({}, webpackCfg.output, {
+    filename: webpackCfg.output.filename.replace(/js$/, 'min.js')
+  })
+  miniCfg.plugins = (miniCfg.plugins || [])
+    .concat(new webpack.optimize.UglifyJsPlugin({
+      compress: {
+        warnings: false
+      }
+    }));
+  delete miniCfg.devtool;
+  return miniCfg;
 }
-
-gulp.task('build:lib', ['build:module'], function() {
-  return _buildCompontent(main, true);
-});
-
-gulp.task('build:doc', ['build:module:doc'], function() {
-  return _buildCompontent(doc, true);
-});
-
-gulp.task('build:module', ['build:template'], function() {
-  return gulp.src(main.src)
-    .pipe(moduleBuilder.buildModule({
-      out: main.entry,
-      excludes: [/^doc\.js$/, /\/doc\/.*$/, /_[^/]*\.js$/],
-      tpl: fs.readFileSync(moduleTmpl.index).toString()
-    }))
-    .pipe(gulp.dest(main.src));
-});
-
-gulp.task('build:module:doc', function() {
-  return gulp.src(doc.src)
-    .pipe(moduleBuilder.buildDoc({
-      out: doc.entry,
-      includes: [/\/doc$/],
-      excludes: [/_[^/]*\.js$/],
-      tpl: fs.readFileSync(moduleTmpl.doc).toString()
-    }))
-    .pipe(gulp.dest(doc.src));
-});
-
-gulp.task('build:template', function() {
-  return gulp.src(template.src)
-    .pipe(moduleBuilder.buildTemplate())
-    .pipe(gulp.dest(template.dist));
-});
-
-
-gulp.task('build:less', function() {
-  return gulp.src([less.src + '/*.less', '!' + less.src + '/theme.less'])
-    .pipe(sourcemaps.init())
-    .pipe(gulpless())
-    .pipe(concat(less.output))
-    .pipe(sourcemaps.write())
-    .pipe(gulp.dest(less.dist))
-    .pipe(rename(less.output.replace(/css$/, 'min.css')))
-    .pipe(minifycss())
-    .pipe(gulp.dest(less.dist));
-});
-
-gulp.task('build:less:theme', function(c) {
-  moduleBuilder.scanFiles(path.join(__dirname, less.theme.src), function() {
-    return false
-  }, function(filePath, isDir, c) {
-    if (isDir) {
-      var dirName = filePath.replace(/.*[\\/]/g, ''),
-        output = less.theme.output.replace(/\{name\}/, dirName);
-      gulp.src([less.theme.src + '/' + dirName + '/*.less', less.src + '/theme.less'])
-        .pipe(sourcemaps.init())
-        .pipe(gulpless())
-        .pipe(concat(output))
-        .pipe(sourcemaps.write())
-        .pipe(gulp.dest(less.theme.dist))
-        .pipe(rename(output.replace(/css$/, 'min.css')))
-        .pipe(minifycss())
-        .pipe(gulp.dest(less.theme.dist))
-        .on('end', c);
-    } else {
-      c();
-    }
-  }, c);
-});
-
-gulp.task('build:styles', ['build:less', 'build:less:theme']);
-
-
+function allConfig(webpackCfg) {
+  var cfg = Object.assign({}, webpackCfg);
+  cfg.output = Object.assign({}, webpackCfg.output, {
+    filename: webpackCfg.output.filename.replace(/js$/, 'all.js')
+  })
+  cfg.externals = Object.assign({}, webpackCfg.externals)
+  delete cfg.externals.observer
+  delete cfg.externals.tpl
+  return cfg;
+}
 gulp.task('build', ['clean'], function() {
-  return gulp.start(['build:lib', 'build:doc', 'build:styles']);
+  return gulp.src('./')
+    .pipe(gulpWebpack(webpackCfg))
+    .pipe(gulp.dest(dist))
+    .pipe(gulpWebpack(miniConfig(webpackCfg)))
+    .pipe(gulp.dest(dist))
+    .pipe(gulpWebpack(allConfig(webpackCfg)))
+    .pipe(gulp.dest(dist))
+    .pipe(gulpWebpack(miniConfig(allConfig(webpackCfg))))
+    .pipe(gulp.dest(dist))
 });
 
 gulp.task('clean', function() {
-  return gulp.src([main.dist, doc.dist, less.dist, less.theme.dist, template.dist + '/**/*.html.js'])
+  return gulp.src(dist)
     .pipe(clean());
 });
 
-gulp.task('watch:module', function(event) {
-
-  gulp.watch(moduleTmpl.index, ['build:module']);
-  gulp.watch(moduleTmpl.doc, ['build:module:doc']);
-
-  gulp.watch([template.src + '/**/*.html'], ['build:template'])
-
-  gulp.watch([main.src + '/**/*.js', '!' + doc.src + '/' + doc.entry, '!' + main.src + '/**/doc/**'], function(event) {
-    if (event.type === 'added' || event.type === 'deleted') {
-      gulp.start('build:module');
-    }
-  });
-
-  gulp.watch([doc.src + '**/doc/**', '!' + main.src + '/' + main.entry], function(event) {
-    if (event.type === 'added' || event.type === 'deleted') {
-      gulp.start('build:module:doc');
-    }
+gulp.task('watch', function(event) {
+  gulp.watch(['./src/**/*.js'], function(event) {
+    gulp.start('build');
   });
 });
 
-gulp.task('watch:style', function() {
-  gulp.watch([less.src + '/*.less', '!' + less.src + '/theme.less'], ['build:less']);
-  gulp.watch([less.theme.src + '/*.less', less.src + '/theme.less'], ['build:theme']);
-})
-
-gulp.task('watch', ['watch:module', 'watch:style']);
-
-gulp.task('server', ['build'], function() {
-  var cfg = Object.create(doc);
-  cfg.entry = {};
-  cfg.entry[main.output] = main.src + '/' + main.entry;
-  cfg.entry[doc.output] = doc.src + '/' + doc.entry;
-  cfg.publicPath = 'http://' + devserver.host + ':' + devserver.port + main.dist.replace(/^\.\//, '/');
-  cfg.hot = true;
-  cfg.devtool = 'source-map',
-  cfg.plugins = (cfg.plugins || []).push(new webpack.NoErrorsPlugin());
-  cfg.output = path.join(__dirname, '[name]');
-  var devServer = new WebpackDevServer(webpack(mkcfg(cfg)), {
+gulp.task('server', function() {
+  webpackCfg.hot = false;
+  var devServer = new WebpackDevServer(webpack(webpackCfg), {
     contentBase: path.join('./'),
-    publicPath: cfg.publicPath,
-    hot: true,
+    publicPath: webpackCfg.output.publicPath,
+    hot: false,
     noInfo: false,
-    inline: true,
+    inline: false,
     stats: {
       colors: true
     }
   });
-  devServer.listen(devserver.port, devserver.host, function(err, result) {
+  devServer.listen(webpackCfg.devServer.port, webpackCfg.devServer.host, function(err, result) {
     if (err) {
       console.log(err);
     } else {
-      console.log('Listening at port ' + devserver.port);
+      console.log('Listening at port ' + webpackCfg.devServer.port);
     }
   });
-  gulp.start('watch');
+});
+
+gulp.task('test', function(done) {
+  new karma({
+    configFile: __dirname + '/build/karma.unit.config.js'
+  }, done).start();
+});
+gulp.task('cover', function(done) {
+  new karma({
+    configFile: __dirname + '/build/karma.cover.config.js'
+  }, done).start();
+});
+
+gulp.task('sauce', function(done) {
+  new karma({
+    configFile: __dirname + '/build/karma.sauce.config.js'
+  }, done).start();
+});
+
+gulp.task('cover-ci', ['cover'], function() {
+  return gulp.src('./coverage/lcov.info')
+    .pipe(codecov());
+});
+
+gulp.task('ci', ['cover-ci', 'sauce']);
+
+
+
+gulp.task('_commit', function() {
+  var args = minimist(process.argv.slice(2));
+  return gulp.src('.')
+    .pipe(git.add({
+      args: '-A'
+    }))
+    .pipe(git.commit(args.comment));
+});
+
+gulp.task('commit', function(callback) {
+  runSequence('build', '_commit',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
+});
+
+gulp.task('_push', function(cb) {
+  git.push('origin', 'master', cb);
+});
+
+gulp.task('push', function(callback) {
+  runSequence('build', '_commit', '_push',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
+});
+
+gulp.task('_version', function() {
+  var args = minimist(process.argv.slice(2));
+  return gulp.src('./package.json')
+    .pipe(bump({
+      type: args.type || 'patch'
+    }).on('error', function(err) {
+      console.log(err)
+    }))
+    .pipe(gulp.dest('./'))
+    .pipe(run('npm publish'));
+});
+
+gulp.task('version', function(callback) {
+  runSequence('build', '_version', '_commit', '_push',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
+});
+
+gulp.task('tag', function(cb) {
+  git.tag(pkg.version, 'Created Tag for version: ' + pkg.version, function(error) {
+    if (error)
+      return cb(error);
+    git.push('origin', 'master', {
+      args: '--tags'
+    }, cb);
+  });
+});
+
+gulp.task('release', function(callback) {
+  runSequence(
+    'build',
+    '_version',
+    '_commit',
+    '_push',
+    'tag',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
 });

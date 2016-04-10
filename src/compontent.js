@@ -1,0 +1,3 @@
+class Compontent {
+  constructor(templ) {}
+}
