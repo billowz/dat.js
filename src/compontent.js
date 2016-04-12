@@ -1,67 +1,59 @@
-const tpl = require('tpl');
+const tpl = require('tpl'),
+  dynamicCompontentOptions = {
+    extend: 'extend',
+    constructor: 'constructor'
+  },
+  compontents = {},
+  hasOwn = Object.prototype.hasOwnProperty;
 
 class Compontent {
-  constructor(templ, props) {
+  constructor(props) {
+    this.template = {};
+
     this.scope = {
       props: props || {}
     };
   }
 }
-const compontents = {};
-Compontent.register = function register(name, option) {
-  if (name in compontents)
-    console.warn('Compontent[' + name + '] is defined');
 
-  let compontent;
-  if (typeof option == 'function') {
-    if (!isCompontent(option))
-      throw TypeError('Invalid Compontent constructor ' + option);
-    compontent = option;
-    compontent.prototype.className = compontent.prototype.className || tpl.hump(name);
-  } else if (option && typeof option == 'object') {
-    compontent = (function(opt, SuperClass) {
-      let userSuperClass = opt[SUPER_CLASS_OPTION];
-      if (false && userSuperClass && !isDirective(userSuperClass))
-        throw TypeError('Invalid Directive SuperClass ' + userSuperClass);
-      SuperClass = userSuperClass || SuperClass;
+tpl.assign(Compontent, {
+  getCompontent(name) {
+    return compontents[name];
+  },
+  isCompontent(object) {
+    return tpl.isExtendOf(object, Compontent);
+  },
+  register(name, option) {
+    let comp = tpl.createClass(option, Compontent, dynamicCompontentOptions);
 
-      let constructor = typeof opt.constructor == 'function' ? opt.constructor : undefined,
-        Directive = function DynamicDirective() {
-          if (!(this instanceof SuperClass))
-            throw new TypeError('Cannot call a class as a function');
+    parseCompontentProps(comp);
 
-          SuperClass.apply(this, arguments);
-          if (constructor)
-            constructor.apply(this, arguments);
-        }
+    if (!comp.className)
+      comp.prototype.className = comp.className = (tpl.hump(name) + 'Compontent');
 
-      Directive.prototype = _.create(SuperClass.prototype, {
-        constructor: {
-          value: Directive,
-          enumerable: false,
-          writable: true,
-          configurable: true
-        }
-      });
+    name = name.toLowerCase();
 
-      delete opt.constructor;
-      delete opt[SUPER_CLASS_OPTION];
+    if (name in compontents)
+      console.warn(`Compontent[${name}] is defined`);
+    compontents[name] = comp;
+    return comp;
+  }
+});
 
-      _.eachObj(opt, (val, key) => {
-        Directive.prototype[key] = val;
-      });
+function parseCompontentProps(comp) {
+  if (comp.__builded_props__)
+    return;
 
-      _.setPrototypeOf(Directive, SuperClass);
-      return Directive;
-    })(option, Directive);
+  let proto = comp.prototype,
+    parent = tpl.prototypeOf(comp),
+    props;
 
-    directive.prototype.className = (_.hump(name) + 'Directive');
-  } else
-    throw TypeError('Invalid Directive Object ' + option);
-
-  name = name.toLowerCase();
-  directive.prototype.name = name;
-
-  directives[name] = directive;
-  return directive;
-};
+  props = hasOwn(proto, 'props') ? proto.props : (proto.props = {});
+  if (parent !== Compontent) {
+    if (!parent.__builded_props__)
+      parseCompontentProps(parent);
+    tpl.assignIf(props, parent.prototype.props);
+  }
+  comp.__builded_props__ = true;
+}
+module.exports = Compontent;
